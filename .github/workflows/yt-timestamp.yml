@@ -1,0 +1,44 @@
+name: YouTube→Sheet自動実行
+
+# -------- トリガー設定 --------
+on:
+  schedule:
+    # 日本時間 1:00 JST に実行する例（UTC 16:00）
+    - cron: '0 16 * * *'
+  workflow_dispatch: {}  # 手動実行トリガーを有効化
+
+# -------- ジョブ定義 --------
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. リポジトリをチェックアウト
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v3
+
+      # 2. Python 環境をセットアップ
+      - name: Python セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # 3. 必要ライブラリをインストール
+      - name: 依存ライブラリをインストール
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4. Secrets を環境変数に設定
+      - name: 環境変数設定
+        run: |
+          echo "YOUTUBE_API_KEYS=${{ secrets.YOUTUBE_API_KEYS }}" >> $GITHUB_ENV
+          echo "SHEET_ID=${{ secrets.SHEET_ID }}"         >> $GITHUB_ENV
+          echo "GCP_CREDENTIALS_JSON<<EOF"               >> $GITHUB_ENV
+          ${{ secrets.GCP_CREDENTIALS_JSON }}
+          EOF
+
+      # 5. Python スクリプトを実行（全チャンネル分）
+      - name: 全チャンネル分を実行
+        run: |
+          python run_all.py
