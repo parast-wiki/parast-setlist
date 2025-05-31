@@ -1,13 +1,9 @@
 name: YouTube→Sheet自動実行
 
-# -------- トリガー設定 --------
+# 手動実行だけ利用する場合
 on:
-  schedule:
-    # 日本時間 1:00 JST に実行する例（UTC 16:00）
-    - cron: '0 16 * * *'
-  workflow_dispatch: {}  # 手動実行トリガーを有効化
+  workflow_dispatch: {}
 
-# -------- ジョブ定義 --------
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
@@ -29,16 +25,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Secrets を環境変数に設定
-      - name: 環境変数設定
+      # 4. GitHub Secrets を使って credentials.json を生成
+      - name: credentials.json を復元
+        run: |
+          echo "${{ secrets.GCP_CREDENTIALS_JSON }}" > credentials.json
+
+      # 5. その他の Secrets を環境変数に設定
+      - name: 環境変数設定（YouTube API キー, スプレッドシートID）
         run: |
           echo "YOUTUBE_API_KEYS=${{ secrets.YOUTUBE_API_KEYS }}" >> $GITHUB_ENV
-          echo "SHEET_ID=${{ secrets.SHEET_ID }}"         >> $GITHUB_ENV
-          echo "GCP_CREDENTIALS_JSON<<EOF"               >> $GITHUB_ENV
-          ${{ secrets.GCP_CREDENTIALS_JSON }}
-          EOF
+          echo "SHEET_ID=${{ secrets.SHEET_ID }}" >> $GITHUB_ENV
 
-      # 5. Python スクリプトを実行（全チャンネル分）
+      # 6. 全チャンネル分のスクリプトを実行
       - name: 全チャンネル分を実行
         run: |
           python run_all.py
